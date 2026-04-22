@@ -13,6 +13,8 @@ Each step() is one conversational turn. The harness maintains conversation
 context across turns. reset() starts a fresh conversation.
 """
 
+import asyncio
+import threading
 from typing import Any, List, Optional
 from uuid import uuid4
 
@@ -20,7 +22,7 @@ from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import Action, Observation, State
 from openenv.core.harnesses.adapter import HarnessAdapter
 from openenv.core.harnesses.types import HarnessAction, HarnessEvent
-from openenv.core.utils import run_async_safely
+from openenv.core.utils import run_async_safely  # noqa: F401
 
 
 class HarnessEnvironment(Environment):
@@ -39,6 +41,10 @@ class HarnessEnvironment(Environment):
     - OpenEnv handles session management and tool injection
     - No step/reset API (standard production mode behavior)
 
+    Uses a dedicated background event loop so that all async adapter
+    operations (start, send_message, stop) share the same loop and
+    subprocess handles remain valid across calls.
+
     Args:
         adapter: HarnessAdapter for the target harness.
         mcp: Optional FastMCP server with additional environment tools.
@@ -56,6 +62,25 @@ class HarnessEnvironment(Environment):
         self._mcp_server = mcp
         self._state = State(episode_id=None, step_count=0)
         self._trajectory: List[HarnessEvent] = []
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop_thread: Optional[threading.Thread] = None
+
+    def _ensure_loop(self) -> asyncio.AbstractEventLoop:
+        """Return the dedicated event loop, starting one if needed."""
+        if self._loop is not None and self._loop.is_running():
+            return self._loop
+        loop = asyncio.new_event_loop()
+        thread = threading.Thread(target=loop.run_forever, daemon=True)
+        thread.start()
+        self._loop = loop
+        self._loop_thread = thread
+        return loop
+
+    def _run(self, coro: Any) -> Any:
+        """Run *coro* on the dedicated loop from the calling (sync) thread."""
+        loop = self._ensure_loop()
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        return future.result()
 
     def reset(
         self,
@@ -65,16 +90,16 @@ class HarnessEnvironment(Environment):
     ) -> Observation:
         """Reset: stop any running harness, start a fresh conversation."""
         # Stop existing session if any
-        if run_async_safely(self.adapter.is_alive()):
-            run_async_safely(self.adapter.stop())
+        if self._run(self.adapter.is_alive()):
+            self._run(self.adapter.stop())
 
         # Inject environment MCP tools into harness if we have an MCP server
         if self._mcp_server is not None:
             tools = self._get_mcp_tool_definitions()
-            run_async_safely(self.adapter.inject_tools(tools))
+            self._run(self.adapter.inject_tools(tools))
 
         # Start fresh harness process
-        run_async_safely(
+        self._run(
             self.adapter.start(working_directory=self.adapter.config.working_directory)
         )
 
@@ -104,7 +129,7 @@ class HarnessEnvironment(Environment):
         message = self._extract_message(action)
 
         # Run one conversational turn (harness does its ReAct loop)
-        harness_response = run_async_safely(self.adapter.send_message(message))
+        harness_response = self._run(self.adapter.send_message(message))
 
         # Accumulate trajectory across turns
         self._trajectory.extend(harness_response.events)
@@ -138,9 +163,17 @@ class HarnessEnvironment(Environment):
         return self._trajectory
 
     def close(self) -> None:
-        """Clean up harness process."""
-        if run_async_safely(self.adapter.is_alive()):
-            run_async_safely(self.adapter.stop())
+        """Clean up harness process and background event loop."""
+        try:
+            if self._run(self.adapter.is_alive()):
+                self._run(self.adapter.stop())
+        finally:
+            if self._loop is not None:
+                self._loop.call_soon_threadsafe(self._loop.stop)
+                if self._loop_thread is not None:
+                    self._loop_thread.join(timeout=5)
+                self._loop = None
+                self._loop_thread = None
 
     def _extract_message(self, action: Action) -> str:
         """Extract the message string from an action."""
@@ -162,7 +195,7 @@ class HarnessEnvironment(Environment):
                 async with Client(self._mcp_server) as client:
                     return await client.list_tools()
 
-            return run_async_safely(_list_tools())
+            return self._run(_list_tools())
         except Exception as e:
             import logging
 
