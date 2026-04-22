@@ -118,6 +118,8 @@ class PiHarnessAdapter(HarnessAdapter):
 
         logger.info("Starting pi: %s (cwd=%s)", " ".join(cmd), working_directory)
 
+        # Use a large buffer limit for stdout — pi's agent_end event
+        # includes the full message history and can exceed the 64KB default.
         self._process = await asyncio.create_subprocess_exec(
             *cmd,
             stdin=asyncio.subprocess.PIPE,
@@ -125,6 +127,7 @@ class PiHarnessAdapter(HarnessAdapter):
             stderr=asyncio.subprocess.PIPE,
             cwd=working_directory,
             env=env,
+            limit=16 * 1024 * 1024,  # 16 MB
         )
 
         # Wait for pi to be ready
