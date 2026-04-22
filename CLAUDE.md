@@ -77,6 +77,8 @@ cd .worktrees/add-feature
 /simplify           →  Refactor (optional)
     ↓
 /pre-submit-pr      →  Validate before PR
+    ↓
+/watch-pr           →  Monitor CI + review (optional)
 ```
 
 ### Skills vs Agents
@@ -95,6 +97,7 @@ Skills are defined in `.claude/skills/` and run inline:
 | [`alignment-review`](.claude/skills/alignment-review/SKILL.md) | "review this code" | Two-tier review (bugs + alignment flags) |
 | [`pre-submit-pr`](.claude/skills/pre-submit-pr/SKILL.md) | "ready for PR?" | Comprehensive PR readiness check |
 | [`rfc-check`](.claude/skills/rfc-check/SKILL.md) | "do I need an RFC?" | Determine if RFC required |
+| [`generate-openenv-env`](.claude/skills/generate-openenv-env/SKILL.md) | "generate an env for textarena" | Build an OpenEnv env from a use case |
 
 **TDD Workflow Skills:**
 
@@ -106,6 +109,7 @@ Skills are defined in `.claude/skills/` and run inline:
 | [`implement`](.claude/skills/implement/SKILL.md) | "/implement" | Make tests pass (Green phase) |
 | [`update-docs`](.claude/skills/update-docs/SKILL.md) | "/update-docs" | Fix stale docs after API changes |
 | [`simplify`](.claude/skills/simplify/SKILL.md) | "/simplify" | Refactor after tests pass |
+| [`watch-pr`](.claude/skills/watch-pr/SKILL.md) | "/watch-pr" | Monitor CI + Greptile review after PR |
 
 ### Available Subagents
 
@@ -197,7 +201,8 @@ uv run usort format src/ tests/
 uv run ruff format src/ tests/
 
 # Build documentation locally
-mkdocs serve --config-file docs/mkdocs.yml
+cd docs && make html
+# Preview: cd docs/_build/html && python -m http.server 8000
 
 # Build Docker images
 docker build -t openenv-base:latest -f src/openenv/core/containers/images/Dockerfile .
@@ -213,6 +218,7 @@ bash .claude/hooks/lint.sh          # Run ruff format check
 bash .claude/hooks/test.sh          # Run pytest (excludes special envs)
 bash .claude/hooks/check-debug.sh   # Find debug code (print, breakpoint, TODO)
 bash .claude/hooks/post-push-pr.sh  # Validate PR after push (freshness, CI, conflicts)
+bash .claude/hooks/ci-wait.sh <PR>  # Poll CI until checks complete or timeout
 ```
 
 These are automatically invoked by `/alignment-review` and `/pre-submit-pr` skills.

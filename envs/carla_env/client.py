@@ -10,8 +10,10 @@ Client for CARLA environment.
 Provides EnvClient wrapper for remote or local CARLA instances.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
+
 from openenv.core.env_client import EnvClient, StepResult
+
 from .models import CarlaAction, CarlaObservation, CarlaState
 
 
@@ -74,7 +76,7 @@ class CarlaEnv(EnvClient[CarlaAction, CarlaObservation, CarlaState]):
         return StepResult(
             observation=observation,
             reward=payload.get("reward"),
-            done=observation.done
+            done=payload.get("done", False),
         )
 
     def _parse_state(self, payload: Dict[str, Any]) -> CarlaState:
