@@ -7,5 +7,6 @@
 """Concrete harness adapter implementations."""
 
 from openenv.core.harnesses.adapters.openclaw import OpenClawAdapter
+from openenv.core.harnesses.adapters.pi import PiHarnessAdapter
 
-__all__ = ["OpenClawAdapter"]
+__all__ = ["OpenClawAdapter", "PiHarnessAdapter"]
