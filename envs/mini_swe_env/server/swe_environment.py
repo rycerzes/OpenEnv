@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shlex
 import time
 from pathlib import Path
@@ -83,6 +84,32 @@ MCP_SERVER_PATH = f"{HOME}/.swe_mcp_server.py"
 MCP_PORT = 8765
 VERIFY_TIMEOUT_S = 300
 SETUP_TIMEOUT_S = 600
+DEFAULT_GIT_CHECKOUT_TIMEOUT_S = 300
+
+
+def _git_checkout_timeout_s() -> int:
+    for name in ("SWE_GIT_CHECKOUT_TIMEOUT_S", "SWE_LOCAL_GIT_CHECKOUT_TIMEOUT_S"):
+        value = os.environ.get(name)
+        if value is None:
+            continue
+        try:
+            timeout_s = int(value)
+        except ValueError:
+            _log.warning(
+                "%s must be an integer; using %ss",
+                name,
+                DEFAULT_GIT_CHECKOUT_TIMEOUT_S,
+            )
+            return DEFAULT_GIT_CHECKOUT_TIMEOUT_S
+        if timeout_s > 0:
+            return timeout_s
+        _log.warning(
+            "%s must be positive; using %ss",
+            name,
+            DEFAULT_GIT_CHECKOUT_TIMEOUT_S,
+        )
+        return DEFAULT_GIT_CHECKOUT_TIMEOUT_S
+    return DEFAULT_GIT_CHECKOUT_TIMEOUT_S
 
 # Path to the sandbox_mcp_server.py source alongside this module.
 _SANDBOX_MCP_SERVER_SOURCE = Path(__file__).parent / "sandbox_mcp_server.py"
@@ -509,7 +536,14 @@ class SWEEnvironment(MCPEnvironment):
             )
             self._apply_test_patch(sandbox, gym_task.test_patch)
             case_results = self._run_swegym_case_tests(sandbox, gym_task)
-            return grade_from_case_results(gym_task, case_results)
+            return grade_from_case_results(
+                gym_task,
+                case_results,
+                reward_mode=(
+                    os.environ.get("SWE_REWARD_MODE", "binary").strip().lower()
+                    or "binary"
+                ),
+            )
         except Exception as exc:
             _log.warning("SWE-Gym grading failed, falling back: %s", exc)
             return None
@@ -651,7 +685,7 @@ class SWEEnvironment(MCPEnvironment):
         r = sandbox.exec(
             f"git checkout --quiet {task.base_commit}",
             cwd=TESTBED,
-            timeout=60,
+            timeout=_git_checkout_timeout_s(),
         )
         if r.exit_code != 0:
             raise RuntimeError(
