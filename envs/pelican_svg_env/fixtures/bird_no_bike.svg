@@ -1,13 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-  <!-- A pelican standing on the ground, no vehicle at all. -->
-  <line x1="0" y1="270" x2="400" y2="270" stroke="#999" stroke-width="3"/>
-  <ellipse cx="180" cy="170" rx="60" ry="42" fill="#fdfdfd" stroke="#333" stroke-width="3"/>
-  <path d="M 226 150 Q 250 120 258 92" fill="none" stroke="#fdfdfd" stroke-width="22" stroke-linecap="round"/>
-  <circle cx="262" cy="84" r="24" fill="#fdfdfd" stroke="#333" stroke-width="3"/>
-  <circle cx="271" cy="77" r="4" fill="#222"/>
-  <path d="M 281 78 L 352 92 L 282 102 Z" fill="#f5b041" stroke="#c47f1a" stroke-width="2"/>
-  <path d="M 282 92 Q 314 128 348 92 Q 316 104 282 92 Z" fill="#f8c471" stroke="#c47f1a" stroke-width="2"/>
-  <line x1="168" y1="210" x2="164" y2="268" stroke="#e67e22" stroke-width="6"/>
-  <line x1="196" y1="210" x2="200" y2="268" stroke="#e67e22" stroke-width="6"/>
-  <path d="M 130 158 L 96 144 L 134 172 Z" fill="#fdfdfd" stroke="#333" stroke-width="2"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><line x1="0" x2="400" y1="270" y2="270" stroke="#999" stroke-width="3"/><ellipse cx="180" cy="170" fill="#fdfdfd" stroke="#333" stroke-width="3" rx="60" ry="42"/><path fill="none" stroke="#fdfdfd" stroke-linecap="round" stroke-width="22" d="M 226 150 Q 250 120 258 92"/><circle cx="262" cy="84" r="24" fill="#fdfdfd" stroke="#333" stroke-width="3"/><circle cx="271" cy="77" r="4" fill="#222"/><path fill="#f5b041" stroke="#c47f1a" stroke-width="2" d="M 281 78 L 352 92 L 282 102 Z"/><path fill="#f8c471" stroke="#c47f1a" stroke-width="2" d="M 282 92 Q 314 128 348 92 Q 316 104 282 92 Z"/><line x1="168" x2="164" y1="210" y2="268" stroke="#e67e22" stroke-width="6"/><line x1="196" x2="200" y1="210" y2="268" stroke="#e67e22" stroke-width="6"/><path fill="#fdfdfd" stroke="#333" stroke-width="2" d="M 130 158 L 96 144 L 134 172 Z"/></svg>
